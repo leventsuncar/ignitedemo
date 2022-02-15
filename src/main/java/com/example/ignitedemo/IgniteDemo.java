@@ -1,15 +1,16 @@
 package com.example.ignitedemo;
 
+import com.bimetri.products.bienport.commons.dto.DTORule;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class IgniteDemo
 {
@@ -22,41 +23,29 @@ public class IgniteDemo
 		igniteConfiguration.setPeerClassLoadingEnabled( false );
 
 		TcpDiscoveryMulticastIpFinder ipFinder = new TcpDiscoveryMulticastIpFinder();
-		ipFinder.setAddresses( Collections.singletonList( "127.0.0.1:47500..47509" ) );
+		ipFinder.setAddresses( Collections.singletonList( "127.0.0.1:11211" ) );
 
 		igniteConfiguration.setDiscoverySpi( new TcpDiscoverySpi().setIpFinder( ipFinder ) );
 
 		Ignite ignite = Ignition.start(igniteConfiguration);
+		IgniteCache cache1 = ignite.getOrCreateCache("armDisarmCommandRegistry");
+		System.out.println(cache1.get( 370 ));
 
-		IgniteCache<String, String> cache = ignite.getOrCreateCache("testCache");
-		cache.put( "key1", "value1");
-		cache.put( "key2", "value2" );
 
-		System.out.println("/////keş oluşturuldu");
+		IgniteCache<String , DynamicData> cache2 = ignite.getOrCreateCache("resourceDynamicData");
+		AtomicInteger i = new AtomicInteger( 1 );
+		cache2.forEach( action -> {
+			System.out.println(action.getKey() + " " + action.getValue());
+			i.getAndIncrement();
+		} );
+		System.out.println(i.get());
+		System.out.println( " Cache " + cache2.get( "EBS-CP-1057985" ).toString());
 
-		ignite.compute(ignite.cluster().forLocal()).broadcast( new RemoteTask() );
+		IgniteCache<Long, DTORule> cache3 = ignite.getOrCreateCache("ruleCache");
+		cache3.forEach( action -> {
+			System.out.println(action.getKey() + " " + action.getValue());
+		} );
 
-		System.out.println(">> Compute task is executed, check for output on the server nodes.");
-
-		ignite.close();
-	}
-	private static class RemoteTask implements IgniteRunnable
-	{
-		@IgniteInstanceResource
-		Ignite ignite;
-
-		@Override
-		public void run ()
-		{
-			System.out.println( ">> Executing the compute task" );
-
-			System.out.println(
-					"   Node ID: " + ignite.cluster().localNode().id() + "\n" + "   OS: " + System.getProperty( "os.name" ) + "   JRE: "
-							+ System.getProperty( "java.runtime.name" ) );
-
-			IgniteCache<String, String> cache = ignite.cache( "testCache" );
-
-			System.out.println( ">> " + cache.get( "key1" ) + " " + cache.get( "key2" ) );
-		}
+//		ignite.close();
 	}
 }
